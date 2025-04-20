@@ -1,9 +1,9 @@
 import React from "react";
 import Sort from "@/components/Sort";
-import { getFiles } from "@/lib/actions/file.actions";
+import { getFiles, getTotalSpaceUsed } from "@/lib/actions/file.actions";
 import { Models } from "node-appwrite";
 import Card from "@/components/Card";
-import { getFileTypesParams } from "@/lib/utils";
+import { convertFileSize, getFileTypesParams, getUsageSummary } from "@/lib/utils";
 
 const Page = async ({ searchParams, params }: SearchParamProps) => {
   const type = ((await params)?.type as string) || "";
@@ -12,7 +12,19 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
   const types = getFileTypesParams(type) as FileType[];
 
-  const files = await getFiles({ types, searchText, sort });
+  const [files, totalSpace] = await Promise.all([getFiles({ types, searchText, sort }), getTotalSpaceUsed()]);
+  const usageSummary = getUsageSummary(totalSpace);
+
+  let currentSize = 0;
+
+  for(let i = 0; i < usageSummary.length; i++){
+    if(usageSummary[i].title.toLowerCase() === type){
+      currentSize = usageSummary[i].size;
+      break;
+    }
+  }
+
+  const currentSizeString = convertFileSize(currentSize);
 
   return (
     <div className="page-container">
@@ -21,7 +33,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
         <div className="total-size-section">
           <p className="body-1">
-            Total: <span className="h5">0 MB</span>
+            Total: <span className="h5">{currentSizeString}</span>
           </p>
 
           <div className="sort-container">
